@@ -1,6 +1,5 @@
 package com.tqazy.jdbc;
 
-import com.tqazy.entity.User;
 import com.tqazy.utils.PropertiesUtils;
 import com.tqazy.utils.ReflectionUtils;
 
@@ -13,11 +12,9 @@ import java.util.Map;
  * @author 散场前的温柔
  */
 public class JDBCUtils {
-
     private static Connection con;
     private static PreparedStatement ps;
     private static ResultSet rs;
-
     private static Map<String, String> map;
 
     /**
@@ -51,41 +48,48 @@ public class JDBCUtils {
 
     public static List<Object> select(String path, String sql, Class clazz, Object ... args){
         getConnection(path);
-        // 如果创建连接失败，返回0行
+        // 如果创建连接失败，返回null
         if(con == null){
             System.out.println("创建数据库连接失败");
             return null;
         }
         List<Object> list = new ArrayList<Object>();
-
         try{
             ps = con.prepareStatement(sql);
             for(int i=0;i<args.length;i++){
                 ps.setObject(i+1, args[i]);
             }
             rs = ps.executeQuery();
-            // 这里开始
+            // 本章内容这里开始
             while(rs.next()){
                 // 1. 利用反射创建对象
                 Object obj = clazz.newInstance();
-
                 // 2. 通过解析SQL语句来判断到底选择了哪些列，以及需要为obj对象的哪些属性赋值
+                /** 2.1. 通过先获取ResultSet结果集的元数据对象ResultSetMetaData。
+                    ResultSetMetaData可以获取结果集里的各种元素，比如：
+                      getColumnLabel()方法可以获取指定列的别名；
+                      getColumnCount()方法可以获取ResultSet对象中的列数 */
                 ResultSetMetaData rsmd = rs.getMetaData();
+                // 2.2 获取结果集的总数量并循环
                 for(int i=0;i<rsmd.getColumnCount();i++) {
+                    // 获取指定列的结果的别名
                     String columnLabel = rsmd.getColumnLabel(i+1);
+                    // 通过指定列的别名从结果集里获取结果值
                     Object columnValue = rs.getObject(columnLabel);
+                    // 将列名和结果值赋值到object对象里
                     ReflectionUtils.setFieldValueByParem(obj, columnLabel, columnValue);
                 }
+                // 将object放入集合里
                 list.add(obj);
             }
         } catch (Exception e){
             e.printStackTrace();
         } finally {
+            // 关闭数据库连接
             close();
         }
         return list;
     }
-
 
     /**
      * 关闭数据库相关连接，释放数据库资源

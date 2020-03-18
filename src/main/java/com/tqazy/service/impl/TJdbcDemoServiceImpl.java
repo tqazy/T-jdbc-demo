@@ -16,6 +16,7 @@ public class TJdbcDemoServiceImpl implements TJdbcDemoService {
         // 写SQL语句时，如果数据库字段名和对象属性名一致，则直接使用即可
         String sql = "SELECT name, password, age, remark FROM user WHERE name = ?";
         List<Object> list = JDBCUtils.select("database.properties", sql, User.class, name);
+        // 将返回的集合中的Object强转为目标类
         List<User> userList = (List<User>)(List)list;
         return userList;
     }

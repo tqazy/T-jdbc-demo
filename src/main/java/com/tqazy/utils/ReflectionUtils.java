@@ -1,179 +1,71 @@
 package com.tqazy.utils;
 
-
-import org.springframework.util.Assert;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author 散场前的温柔
  */
 public abstract class ReflectionUtils {
     private final static String SET = "set";
-    private final static String GET = "get";
     private final static String IS = "is";
-
-    /**
-     * 拷贝两个对象
-     *
-     * @param source
-     * @param target
-     * @throws Exception
-     */
-    public static void copyProperties(Object source, Object target) throws Exception {
-        //断言 目标对象不为空，否则抛出异常
-        Assert.notNull(source, "Source must not be null");
-        Assert.notNull(target, "Target must not be null");
-
-        Map<String, Object> valueMap = getFieldValueMap(source);
-        setFieldValue(target, valueMap);
-    }
 
     /**
      * 把属性和属性值赋值到反射后的Object中
      *
-     * @param obj 反射后的Object
-     * @param name 属性名
-     * @param value 属性值
+     * @param object    反射后的Object
+     * @param columnLable   属性名
+     * @param columnValue   属性值
      */
-    public static void setFieldValueByParem(Object obj, String name ,Object value) throws Exception {
-        Class<?> beanClass = obj.getClass();
-        //获取bean的所有方法
-        Method[] methods = beanClass.getDeclaredMethods();
-        //获取bean的所有字段
-        Field[] fields = beanClass.getDeclaredFields();
+    public static void setFieldValueByParem(Object object, String columnLable, Object columnValue) throws Exception{
+        // 将反射后的object取它的运行时类(即目标类)clazz
+        Class clazz = object.getClass();
+        // 把目标类的所有方法名取出形成数组methods
+        Method[] methods = clazz.getDeclaredMethods();
+        // 把目标类的所有属性名去除形成数组fields
+        Field[] fields = clazz.getDeclaredFields();
+        // 循环属性数组
         for (Field field : fields) {
-            try {
-                String fieldName = field.getName();
-                if(fieldName.equals(name)) {
-                    //获取字段的类型
-                    String fieldType = field.getType().getSimpleName();
-                    if (("boolean".equals(fieldType) || "Boolean".equals(fieldType)) && "is".equals(fieldName.substring(0, 2))) {
-                        fieldName = fieldName.substring(2);
-                    }
-                    //获取字段set的方法名
-                    String fieldSetName = parGetOrSetName(fieldName, SET);
-                    //获取字段的set方法
-                    Method fieldSetMet = beanClass.getMethod(fieldSetName, field.getType());
-                    //判断有没有该方法
-                    if (!checkMethod(methods, fieldSetMet)) {
-                        continue;
-                    }
-                    if (value != null) {
-                        fieldSetMet.invoke(obj, value);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            // 执行Field的getName()方法，取出属性名
+            String fieldName = field.getName();
+            // 指定Field的getType()方法，去取出类型的底层类简称
+            String fieldType = field.getType().getSimpleName();
+            // 如果类型是(boolean或Boolean)并且属性名以is开头的，属性名截去前两位。
+            if (("boolean".equals(fieldType) || "Boolean".equals(fieldType)) && IS.equals(fieldName.substring(0, 2))) {
+                fieldName = fieldName.substring(2);
             }
-        }
-    }
-
-    /**
-     * 取出bean的值放到map中
-     *
-     * @param bean
-     * @return
-     */
-    private static Map<String, Object> getFieldValueMap(Object bean) throws Exception {
-        Class<?> beanClass = bean.getClass();
-        //获取bean的所有方法
-        Method[] methods = beanClass.getDeclaredMethods();
-        //获取bean的所有字段
-        Field[] fields = beanClass.getDeclaredFields();
-
-        Map<String, Object> valueMap = new HashMap<String, Object>(10);
-        for (Field field : fields) {
-            try {
-                //获取字段的类型
-                //String  boolean
-                String fieldType = field.getType().getSimpleName();
-                //java.lang.String  boolean
-                String fieldType1 = field.getType().getName();
-
-                Method fieldGetMet;
-                String fieldName = field.getName();
-                if ("boolean".equals(fieldType) || "Boolean".equals(fieldType)) {
-                    if (!IS.equals(fieldName.substring(0, 2))) {
-                        fieldName = IS + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-                    } else {
-                        fieldName = IS + fieldName.substring(2, 3).toUpperCase() + fieldName.substring(3);
-                    }
-                    //获取boolean的isXxx方法
-                    fieldGetMet = beanClass.getMethod(fieldName, new Class[]{});
-                } else {
-                    //获取字段get的方法名
-                    String fieldGetName = parGetOrSetName(fieldName, GET);
-                    //获取字段的get方法
-                    fieldGetMet = beanClass.getMethod(fieldGetName, new Class[]{});
-                }
-                //判断有没有该方法
-                if (!checkMethod(methods, fieldGetMet)) {
-                    continue;
-                }
-                //获取字段的值
-                Object fieldVal = fieldGetMet.invoke(bean, new Object[]{});
-                if (fieldVal != null) {
-                    valueMap.put(field.getName(), fieldVal);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return valueMap;
-    }
-
-    /**
-     * 把属性值放到bean
-     *
-     * @param bean
-     * @param valueMap
-     */
-    private static void setFieldValue(Object bean, Map<String, Object> valueMap) throws Exception {
-        Class<?> beanClass = bean.getClass();
-        //获取bean的所有方法
-        Method[] methods = beanClass.getDeclaredMethods();
-        //获取bean的所有字段
-        Field[] fields = beanClass.getDeclaredFields();
-        for (Field field : fields) {
-            try {
-                //获取字段的类型
-                String fieldType = field.getType().getSimpleName();
-                String fieldName = field.getName();
-                if (("boolean".equals(fieldType) || "Boolean".equals(fieldType)) && "is".equals(fieldName.substring(0, 2))) {
-                    fieldName = fieldName.substring(2);
-                }
-                //获取字段set的方法名
+            // 如果解析出来的属性名和传入的属性名一直
+            if (fieldName.equals(columnLable)) {
+                // 生成属性名的set方法名
                 String fieldSetName = parGetOrSetName(fieldName, SET);
-                //获取字段的set方法
-                Method fieldSetMet = beanClass.getMethod(fieldSetName, field.getType());
-                //判断有没有该方法
+                // 从目标类中get出需要的那个set方法
+                Method fieldSetMet = clazz.getMethod(fieldSetName, field.getType());
+                // 如果从方法名数组中找不到这个方法，那么就跳过
                 if (!checkMethod(methods, fieldSetMet)) {
                     continue;
                 }
-                Object value = valueMap.get(field.getName());
-                if (value != null) {
-                    fieldSetMet.invoke(bean, value);
+                // 如果传入的属性值不为空
+                if (columnValue != null) {
+                    //通过找到的属性对应的set方法，把属性值赋值给object对象中，此时便完成了将属性值赋值给到反射后的object中
+                    fieldSetMet.invoke(object, columnValue);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
 
     /**
-     * 拼接set或get方法
+     * 生成属性名的set或get方法名
      *
-     * @param fieldName
+     * @param fieldName 属性名
+     * @param met "set" or "get"
      * @return
      */
     private static String parGetOrSetName(String fieldName, String met) {
+        // 如果属性名为null或为空字符串，那么返回null
         if (null == fieldName || "".equals(fieldName)) {
             return null;
         }
+        // 返回 方法名 = "set" + 属性名首字母大写 + 属性名除字母外的其他部分
         return met + fieldName.substring(0, 1).toUpperCase()
                 + fieldName.substring(1);
     }
@@ -186,9 +78,11 @@ public abstract class ReflectionUtils {
      * @return
      */
     private static boolean checkMethod(Method[] methods, Method met) {
+        // 如果传入的方法为空，那么返回false
         if (met == null) {
             return false;
         }
+        // 如果传入的方法再方法数组中找到，那么返回true
         for (Method method : methods) {
             if (met.equals(method)) {
                 return true;
@@ -196,5 +90,4 @@ public abstract class ReflectionUtils {
         }
         return false;
     }
-
 }
