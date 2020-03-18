@@ -1,0 +1,1 @@
+利用反射，实现了jdbc通过PreparedStatement执行读取操作，且面向对象的效果
