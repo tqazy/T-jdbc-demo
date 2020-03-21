@@ -62,25 +62,7 @@ public class JDBCUtils {
             rs = ps.executeQuery();
             // 本章内容这里开始
             while(rs.next()){
-                // 1. 利用反射创建对象
-                Object obj = clazz.newInstance();
-                // 2. 通过解析SQL语句来判断到底选择了哪些列，以及需要为obj对象的哪些属性赋值
-                /** 2.1. 通过先获取ResultSet结果集的元数据对象ResultSetMetaData。
-                    ResultSetMetaData可以获取结果集里的各种元素，比如：
-                      getColumnLabel()方法可以获取指定列的别名；
-                      getColumnCount()方法可以获取ResultSet对象中的列数 */
-                ResultSetMetaData rsmd = rs.getMetaData();
-                // 2.2 获取结果集的总数量并循环
-                for(int i=0;i<rsmd.getColumnCount();i++) {
-                    // 获取指定列的结果的别名
-                    String columnLabel = rsmd.getColumnLabel(i+1);
-                    // 通过指定列的别名从结果集里获取结果值
-                    Object columnValue = rs.getObject(columnLabel);
-                    // 将列名和结果值赋值到object对象里
-                    ReflectionUtils.setFieldValueByParem(obj, columnLabel, columnValue);
-                }
-                // 将object放入集合里
-                list.add(obj);
+                list.add(getObjectByClazz(clazz));
             }
         } catch (Exception e){
             e.printStackTrace();
@@ -89,6 +71,22 @@ public class JDBCUtils {
             close();
         }
         return list;
+    }
+
+    private static Object getObjectByClazz(Class clazz) throws Exception {
+        // 1. 利用反射创建对象
+        Object obj = clazz.newInstance();
+        ResultSetMetaData rsmd = rs.getMetaData();
+        for(int i=0;i<rsmd.getColumnCount();i++) {
+            // 获取指定列的结果的别名
+            String columnLabel = rsmd.getColumnLabel(i+1);
+            // 通过指定列的别名从结果集里获取结果值
+            Object columnValue = rs.getObject(columnLabel);
+            // 将列名和结果值赋值到object对象里
+            ReflectionUtils.setFieldValueByParem(obj, columnLabel, columnValue);
+        }
+        // 将object放入集合里
+        return obj;
     }
 
     /**
